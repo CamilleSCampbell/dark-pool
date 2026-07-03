@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chiaroscuro — backtest dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0A0C10;--p:#10131A;--p2:#161A26;--ln:#222836;--t:#E8E4DA;--dim:#8892A4;--ft:#5A6377;
+  --amber:#FFA028;--red:#E5484D;--green:#2FA36B;--m:'JetBrains Mono',monospace;--u:'Inter',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t);font-family:var(--u);font-size:13px;padding:16px;
+  -webkit-font-smoothing:antialiased;max-width:720px;margin:0 auto}
+h1{font-family:var(--m);font-size:16px;font-weight:500;margin-bottom:4px}
+.sub{color:var(--dim);font-size:12px;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px}
+.card{background:var(--p);border:1px solid var(--ln);border-radius:10px;padding:14px}
+.card .v{font-family:var(--m);font-size:22px;font-weight:600;margin-bottom:2px}
+.card .k{font-family:var(--m);font-size:10px;color:var(--ft);text-transform:uppercase;letter-spacing:.1em}
+.green{color:var(--green)} .red{color:var(--red)} .amber{color:var(--amber)}
+.section{background:var(--p);border:1px solid var(--ln);border-radius:10px;padding:14px;margin-bottom:14px}
+.sec-h{font-family:var(--m);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-family:var(--m);font-size:11px}
+th{color:var(--ft);font-weight:400;text-transform:uppercase;font-size:9px;letter-spacing:.08em;
+  text-align:right;padding:5px 6px;border-bottom:1px solid var(--ln)}
+th:first-child,td:first-child{text-align:left}
+td{padding:6px;text-align:right;border-bottom:1px solid rgba(34,40,54,.5)}
+.edge-yes{color:var(--green);font-weight:500} .edge-no{color:var(--red);font-weight:500}
+.bar{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.bar-label{width:70px;font-family:var(--m);font-size:10px;color:var(--ft);text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:16px;background:var(--bg);border:1px solid var(--ln);border-radius:3px;overflow:hidden;position:relative}
+.bar-fill{height:100%;border-radius:3px;transition:width .6s}
+.bar-val{width:60px;font-family:var(--m);font-size:10px;font-weight:500}
+.empty{color:var(--ft);padding:16px 0;text-align:center;font-size:12px;line-height:1.6}
+.refreshing{opacity:.5}
+.pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:500}
+.pill-g{background:rgba(47,163,107,.15);color:var(--green)}
+.pill-r{background:rgba(229,72,77,.15);color:var(--red)}
+.pill-a{background:rgba(255,160,40,.12);color:var(--amber)}
+.ts-note{font-family:var(--m);font-size:10px;color:var(--ft);text-align:right;margin-top:10px}
+.nav{display:flex;gap:10px;margin-bottom:16px}
+.nav a{font-family:var(--m);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);text-decoration:none;padding:4px 8px;border-radius:3px;border:1px solid transparent}
+.nav a:hover{color:var(--t);border-color:var(--ln)}
+.nav a.active{color:var(--amber);border-color:rgba(255,160,40,.4)}
+@media(max-width:480px){.cards{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/">dark pool</a>
+  <a href="/dashboard" class="active">dashboard</a>
+</nav>
+
+<h1>chiaroscuro backtest</h1>
+<div class="sub">Does the model predict reality? Auto-refreshes every 60s.</div>
+
+<div class="cards" id="topCards">
+  <div class="card"><div class="v amber" id="cSnaps">—</div><div class="k">Snapshots (24h)</div></div>
+  <div class="card"><div class="v" id="cFills">—</div><div class="k">Large fills seen</div></div>
+  <div class="card"><div class="v green" id="cHit">—</div><div class="k">Edge confirmed</div></div>
+  <div class="card"><div class="v" id="cRate">—</div><div class="k">Hit rate</div></div>
+</div>
+
+<div class="section">
+  <div class="sec-h">Cluster-level edge — predicted savings at 5,000 contracts</div>
+  <div id="clusterBars"><div class="empty">Waiting for first snapshot…</div></div>
+</div>
+
+<div class="section">
+  <div class="sec-h">Recent fills — model vs reality</div>
+  <div id="fillsTable"><div class="empty">No large fills observed yet. The model watches for 500+ contract fills and compares them to its predictions.</div></div>
+</div>
+
+<div class="section">
+  <div class="sec-h">Latest snapshots</div>
+  <div id="snapsTable"><div class="empty">Waiting for first snapshot…</div></div>
+</div>
+
+<div class="ts-note" id="lastUpdate">—</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=n=>n>=1e6?'$'+(n/1e6).toFixed(1)+'M':n>=1000?Math.round(n).toLocaleString():String(n);
+
+async function refresh(){
+  try{
+    const d=await(await fetch('/api/backtest')).json();
+    if(d.error){$('clusterBars').innerHTML=`<div class="empty">${d.error}</div>`;return;}
+
+    $('cSnaps').textContent=d.total_snapshots_24h;
+    $('cFills').textContent=d.total_fills_observed;
+    $('cHit').textContent=d.edge_confirmed;
+    $('cRate').textContent=d.hit_rate!==null?(d.hit_rate*100).toFixed(0)+'%':'—';
+    $('cRate').className='v '+(d.hit_rate>=0.6?'green':d.hit_rate>=0.4?'amber':'red');
+
+    // cluster bars
+    if(d.clusters&&d.clusters.length){
+      const mx=Math.max(...d.clusters.map(c=>c.avg_lit_bps),100);
+      $('clusterBars').innerHTML=d.clusters.map(c=>`
+        <div style="margin-bottom:14px">
+          <div style="font-size:12px;font-weight:500;margin-bottom:6px">${c.title}
+            <span class="pill pill-g">${c.avg_risk_reduction>0?(c.avg_risk_reduction*100).toFixed(0)+'% hedged':''}</span>
+          </div>
+          <div class="bar">
+            <div class="bar-label">Lit</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${c.avg_lit_bps/mx*100}%;background:var(--red)"></div></div>
+            <div class="bar-val red">${c.avg_lit_bps} bps</div>
+          </div>
+          <div class="bar">
+            <div class="bar-label">Dark</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${Math.max(2,c.avg_dark_bps/mx*100)}%;background:var(--green)"></div></div>
+            <div class="bar-val green">${c.avg_dark_bps} bps</div>
+          </div>
+          <div style="font-family:var(--m);font-size:11px;color:var(--amber);margin-top:4px">
+            Edge: ${c.edge_bps} bps per trade · ${c.snapshots} snapshots
+          </div>
+        </div>`).join('');
+    }
+
+    // fills
+    if(d.recent_fills&&d.recent_fills.length){
+      $('fillsTable').innerHTML=`<table>
+        <thead><tr><th>Outcome</th><th>Size</th><th>Actual bps</th><th>Predicted lit</th><th>Predicted dark</th><th>Edge?</th></tr></thead>
+        <tbody>${d.recent_fills.slice().reverse().map(f=>`
+          <tr>
+            <td>${(f.outcome||'').slice(0,12)}</td>
+            <td>${fmt(f.size)}</td>
+            <td>${f.actual_bps}</td>
+            <td>${f.predicted_lit_bps??'—'}</td>
+            <td>—</td>
+            <td>${f.edge_confirmed===true?'<span class="edge-yes">YES</span>':
+                  f.edge_confirmed===false?'<span class="edge-no">NO</span>':'—'}</td>
+          </tr>`).join('')}</tbody></table>`;
+    }
+
+    // snapshots
+    if(d.recent_snapshots&&d.recent_snapshots.length){
+      $('snapsTable').innerHTML=`<table>
+        <thead><tr><th>Outcome</th><th>Size</th><th>Mid</th><th>Lit bps</th><th>Naive bps</th><th>Dark bps</th><th>Hedged</th></tr></thead>
+        <tbody>${d.recent_snapshots.slice().reverse().slice(0,30).map(s=>`
+          <tr>
+            <td>${(s.outcome||'').slice(0,12)}</td>
+            <td>${fmt(s.test_size)}</td>
+            <td>${s.mid.toFixed(3)}</td>
+            <td class="red">${s.predicted_lit_bps??'—'}</td>
+            <td>${s.predicted_naive_bps}</td>
+            <td class="green">${s.predicted_dark_bps}</td>
+            <td class="amber">${(s.risk_reduction*100).toFixed(0)}%</td>
+          </tr>`).join('')}</tbody></table>`;
+    }
+
+    $('lastUpdate').textContent='Last refresh: '+new Date().toLocaleTimeString();
+  }catch(e){
+    $('lastUpdate').textContent='Refresh failed: '+e.message;
+  }
+}
+
+refresh();
+setInterval(refresh,60000);
+</script>
+</body>
+</html>

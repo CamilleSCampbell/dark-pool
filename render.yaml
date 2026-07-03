@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: chiaroscuro
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m backend.main
+    envVars:
+      - key: CHIAROSCURO_MODE
+        value: live
+      - key: CHIAROSCURO_PORT
+        value: "8420"

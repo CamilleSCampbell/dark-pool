@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.vercel/
+backtest_log.jsonl
+.DS_Store
+Thumbs.db

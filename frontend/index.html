@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHIAROSCURO — dark pool for correlated event markets</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0A0C10; --panel:#10131A; --panel2:#141823; --line:#222836;
+  --paper:#E8E4DA; --dim:#8892A4; --faint:#5A6377;
+  --amber:#FFA028; --amber-soft:rgba(255,160,40,.12);
+  --red:#E5484D; --green:#2FA36B;
+  --mono:'JetBrains Mono',monospace; --ui:'Inter',sans-serif; --disp:'Fraunces',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--void);color:var(--paper);font-family:var(--ui);font-size:13px;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* ── top bar ── */
+.topbar{display:flex;align-items:center;gap:20px;padding:14px 22px;
+  border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:50}
+.wordmark{font-family:var(--disp);font-style:italic;font-weight:500;font-size:22px;
+  letter-spacing:.01em;white-space:nowrap}
+.wordmark .chiaro{color:var(--paper)}
+.wordmark .scuro{color:var(--faint);text-shadow:0 0 14px rgba(255,160,40,.25)}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  padding:3px 8px;border-radius:3px;border:1px solid var(--line);color:var(--dim)}
+.tag.live{color:var(--green);border-color:rgba(47,163,107,.5)}
+.tag.demo{color:var(--amber);border-color:rgba(255,160,40,.5)}
+.topstats{display:flex;gap:26px;margin-left:auto;font-family:var(--mono);font-size:11px}
+.topstats .k{color:var(--faint);text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;display:block;margin-bottom:2px}
+.topstats .v{color:var(--amber);font-size:14px;font-weight:500}
+.topstats .v.neutral{color:var(--paper)}
+.nav{display:flex;align-items:center;gap:10px;margin-left:8px}
+.nav a{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--dim);text-decoration:none;padding:4px 8px;border-radius:3px;border:1px solid transparent}
+.nav a:hover{color:var(--paper);border-color:var(--line)}
+.nav a.active{color:var(--amber);border-color:rgba(255,160,40,.4)}
+
+/* ── grid ── */
+.grid{display:grid;grid-template-columns:280px 1fr 360px;gap:1px;background:var(--line);
+  min-height:calc(100vh - 61px)}
+.col{background:var(--void);padding:18px 16px;overflow-y:auto;max-height:calc(100vh - 61px)}
+.col-h{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center}
+
+/* ── clusters ── */
+.cluster-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:13px 14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s}
+.cluster-card:hover{border-color:var(--faint)}
+.cluster-card.active{border-color:var(--amber);background:var(--panel2)}
+.cluster-title{font-weight:600;font-size:13px;margin-bottom:8px;line-height:1.3}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.chip{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border-radius:10px;
+  background:var(--panel2);border:1px solid var(--line);color:var(--dim)}
+.chip b{color:var(--paper);font-weight:500}
+.cluster-meta{font-family:var(--mono);font-size:10px;color:var(--faint);display:flex;gap:12px}
+.cluster-meta .nr{color:var(--amber)}
+
+/* ── center ── */
+.section{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:16px;margin-bottom:14px}
+.sec-h{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--amber);margin-bottom:12px}
+h2.cluster-name{font-family:var(--disp);font-weight:500;font-size:24px;margin-bottom:4px;line-height:1.15}
+.sub{color:var(--dim);font-size:12px;margin-bottom:14px}
+
+table.data{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:11.5px}
+table.data th{color:var(--faint);font-weight:400;text-transform:uppercase;font-size:9.5px;
+  letter-spacing:.1em;text-align:right;padding:5px 8px;border-bottom:1px solid var(--line)}
+table.data th:first-child,table.data td:first-child{text-align:left}
+table.data td{padding:6px 8px;text-align:right;border-bottom:1px solid rgba(34,40,54,.5)}
+table.data tr.sel-row{background:var(--amber-soft)}
+table.data tr:hover{background:rgba(255,255,255,.02);cursor:pointer}
+.p-chip{display:inline-block;min-width:46px;text-align:center;padding:1px 6px;border-radius:9px;
+  background:var(--panel2);border:1px solid var(--line);font-weight:500}
+
+/* correlation heatmap */
+.hm-wrap{overflow-x:auto}
+.hm{display:grid;gap:2px;font-family:var(--mono);font-size:9px}
+.hm .cell{aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  border-radius:2px;color:rgba(232,228,218,.85);min-width:34px}
+.hm .lbl{color:var(--faint);font-size:8.5px;display:flex;align-items:center;
+  justify-content:flex-end;padding-right:5px;white-space:nowrap;overflow:hidden}
+.hm .lbl.top{writing-mode:vertical-rl;transform:rotate(180deg);justify-content:flex-start;
+  padding:4px 0 0}
+
+/* order ticket */
+.ticket{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end}
+.field label{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);margin-bottom:5px}
+.field input,.field select{width:100%;background:var(--void);border:1px solid var(--line);
+  border-radius:6px;color:var(--paper);font-family:var(--mono);font-size:13px;padding:8px 10px}
+.side-toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.side-toggle button{flex:1;background:var(--void);border:none;color:var(--dim);
+  font-family:var(--mono);font-size:12px;padding:8px 0;letter-spacing:.06em}
+.side-toggle button.on-sell{background:rgba(229,72,77,.16);color:var(--red)}
+.side-toggle button.on-buy{background:rgba(47,163,107,.16);color:var(--green)}
+.btn{background:var(--amber);color:#171100;border:none;border-radius:6px;font-weight:600;
+  font-size:12.5px;padding:9px 16px;letter-spacing:.03em;font-family:var(--mono)}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent;color:var(--amber);border:1px solid rgba(255,160,40,.5)}
+
+/* quote comparison */
+.venues{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:14px}
+.venue{background:var(--void);border:1px solid var(--line);border-radius:8px;padding:12px}
+.venue.hero{border-color:var(--amber)}
+.venue .vn{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--faint);margin-bottom:8px}
+.venue.hero .vn{color:var(--amber)}
+.venue .px{font-family:var(--mono);font-size:20px;font-weight:500;margin-bottom:3px}
+.venue .bps{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.venue .bps b{font-weight:500}
+.bar-track{height:5px;background:var(--panel2);border-radius:3px;margin-top:9px;overflow:hidden}
+.bar{height:100%;border-radius:3px;transition:width .6s cubic-bezier(.2,.7,.2,1)}
+.note{font-family:var(--mono);font-size:10px;color:var(--faint);margin-top:9px;line-height:1.5}
+.hedge-list{margin-top:12px;font-family:var(--mono);font-size:11px;line-height:1.8;color:var(--dim)}
+.hedge-list .dir-b{color:var(--green)} .hedge-list .dir-s{color:var(--red)}
+.merge-note{margin-top:8px;padding:8px 10px;background:var(--amber-soft);border-radius:6px;
+  font-size:11px;color:var(--paper);line-height:1.5}
+
+/* ── pool column ── */
+.batch-clock{display:flex;align-items:center;gap:16px;background:var(--panel);
+  border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:12px}
+.ring{position:relative;width:74px;height:74px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:19px;font-weight:500;color:var(--amber)}
+.batch-info{font-family:var(--mono);font-size:11px;color:var(--dim);line-height:1.7}
+.batch-info b{color:var(--paper);font-weight:500}
+
+.sealed-book{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:13px;margin-bottom:12px}
+.sealed-row{display:flex;align-items:center;gap:9px;padding:6px 2px;
+  border-bottom:1px solid rgba(34,40,54,.5);font-family:var(--mono);font-size:10.5px;
+  animation:sealIn .4s ease}
+@keyframes sealIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1}}
+.sealed-row .hash{color:var(--faint);letter-spacing:.02em}
+.redact{display:inline-block;height:9px;border-radius:2px;
+  background:repeating-linear-gradient(90deg,#2A3040 0 6px,#232836 6px 12px)}
+.empty{font-family:var(--mono);font-size:11px;color:var(--faint);padding:10px 2px;line-height:1.6}
+
+.tape{background:#0C0E13;border:1px solid var(--line);border-radius:8px;padding:13px}
+.tape table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:10.5px}
+.tape th{color:var(--faint);font-weight:400;font-size:9px;text-transform:uppercase;
+  letter-spacing:.1em;text-align:right;padding:3px 5px;border-bottom:1px solid var(--line)}
+.tape th:first-child,.tape td:first-child{text-align:left}
+.tape td{padding:5px;text-align:right;border-bottom:1px solid rgba(34,40,54,.4);color:var(--paper)}
+.tape tr.new td{animation:flash 1.2s ease}
+@keyframes flash{0%{background:var(--amber-soft)}100%{background:transparent}}
+.mech-cross{color:var(--green)} .mech-solver{color:var(--amber)}
+.saved{color:var(--green)}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  background:var(--panel2);border:1px solid var(--amber);border-radius:8px;
+  padding:11px 18px;font-family:var(--mono);font-size:12px;color:var(--paper);
+  opacity:0;pointer-events:none;transition:opacity .3s;z-index:99}
+.toast.show{opacity:1}
+
+@media (max-width:1100px){
+  .grid{grid-template-columns:1fr}
+  .col{max-height:none}
+  .topstats{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wordmark"><span class="chiaro">chiaro</span><span class="scuro">scuro</span></div>
+  <nav class="nav">
+    <a href="/" class="active">dark pool</a>
+    <a href="/dashboard">dashboard</a>
+  </nav>
+  <span class="tag" id="modeTag">—</span>
+  <div class="topstats">
+    <div><span class="k">Batch</span><span class="v neutral" id="tbBatch">—</span></div>
+    <div><span class="k">Sealed intents</span><span class="v neutral" id="tbSealed">0</span></div>
+    <div><span class="k">Settled notional</span><span class="v" id="tbNotional">$0</span></div>
+    <div><span class="k">Avg saved vs naive</span><span class="v" id="tbSaved">0 bps</span></div>
+  </div>
+</div>
+
+<div class="grid">
+
+  <!-- LEFT: clusters -->
+  <div class="col">
+    <div class="col-h"><span>Correlated clusters</span><span id="clusterCount"></span></div>
+    <div id="clusterList"></div>
+  </div>
+
+  <!-- CENTER: cluster detail + ticket -->
+  <div class="col" id="centerCol">
+    <div id="detail"><div class="empty" style="padding:40px 10px">Loading clusters…</div></div>
+  </div>
+
+  <!-- RIGHT: the pool -->
+  <div class="col">
+    <div class="col-h"><span>The pool</span><span id="poolWindow"></span></div>
+
+    <div class="batch-clock">
+      <div class="ring">
+        <svg width="74" height="74" viewBox="0 0 74 74">
+          <circle cx="37" cy="37" r="32" fill="none" stroke="#222836" stroke-width="5"/>
+          <circle id="ringArc" cx="37" cy="37" r="32" fill="none" stroke="#FFA028"
+                  stroke-width="5" stroke-linecap="round"
+                  stroke-dasharray="201" stroke-dashoffset="0"/>
+        </svg>
+        <div class="num" id="ringNum">—</div>
+      </div>
+      <div class="batch-info">
+        Batch <b id="batchId">—</b><br>
+        clears in <b id="batchIn">—</b><br>
+        uniform price · sealed until clear
+      </div>
+    </div>
+
+    <div class="sealed-book">
+      <div class="col-h" style="margin-bottom:8px"><span>Sealed intent book</span></div>
+      <div id="sealedRows">
+        <div class="empty">No sealed intents in this batch.<br>Route an order — its size and side stay encrypted until the batch clears.</div>
+      </div>
+    </div>
+
+    <div class="tape">
+      <div class="col-h" style="margin-bottom:8px"><span>Settlement tape — public</span>
+        <button class="btn ghost" style="padding:3px 9px;font-size:10px" onclick="forceClear()">clear batch now</button>
+      </div>
+      <table>
+        <thead><tr><th>Outcome</th><th>Mech</th><th>Px</th><th>Size</th><th>Saved</th></tr></thead>
+        <tbody id="tapeBody"><tr><td colspan="5" class="empty">Nothing settled yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const fmt$ = n => n >= 1e6 ? '$' + (n/1e6).toFixed(1) + 'M' : '$' + Math.round(n).toLocaleString();
+const state = { clusters: [], sel: null, detail: null, side: 'SELL',
+                selToken: null, lastQuote: null, lastTapeSeq: 0 };
+
+/* ── boot ── */
+async function boot() {
+  const st = await (await fetch('/api/status')).json();
+  const tag = $('modeTag');
+  tag.textContent = st.mode.toUpperCase() + (st.mode === 'demo' ? ' · FIXTURES' : ' · POLYMARKET');
+  tag.className = 'tag ' + st.mode;
+  $('poolWindow').textContent = st.batch_window + 's windows';
+  state.clusters = await (await fetch('/api/clusters')).json();
+  $('clusterCount').textContent = state.clusters.length;
+  renderClusters();
+  if (state.clusters.length) selectCluster(state.clusters[0].cluster_id);
+  pollPool(); setInterval(pollPool, 1500);
+}
+
+function renderClusters() {
+  $('clusterList').innerHTML = state.clusters.map(c => `
+    <div class="cluster-card ${c.cluster_id === state.sel ? 'active' : ''}"
+         onclick="selectCluster('${c.cluster_id}')">
+      <div class="cluster-title">${c.title}</div>
+      <div class="chips">${c.top.map(o =>
+        `<span class="chip">${o.outcome} <b>${Math.round(o.p*100)}%</b></span>`).join('')}</div>
+      <div class="cluster-meta">
+        <span>${fmt$(c.volume_24h)} 24h</span>
+        <span>${c.n_outcomes} outcomes</span>
+        ${c.neg_risk ? '<span class="nr">NEG RISK</span>' : ''}
+      </div>
+    </div>`).join('');
+}
+
+/* ── cluster detail ── */
+async function selectCluster(cid) {
+  state.sel = cid;
+  renderClusters();
+  state.detail = await (await fetch('/api/cluster/' + cid)).json();
+  state.selToken = state.detail.outcomes[0].token_yes;
+  state.lastQuote = null;
+  renderDetail();
+}
+
+function renderDetail() {
+  const d = state.detail;
+  const oc = d.outcomes;
+  const selIdx = oc.findIndex(o => o.token_yes === state.selToken);
+
+  const rows = oc.map((o, i) => `
+    <tr class="${i === selIdx ? 'sel-row' : ''}" onclick="pickToken('${o.token_yes}')">
+      <td>${o.outcome}</td>
+      <td><span class="p-chip">${(o.p*100).toFixed(1)}%</span></td>
+      <td>${o.p.toFixed(3)}</td>
+      <td>${fmt$(o.volume_24h)}</td>
+    </tr>`).join('');
+
+  const k = oc.length;
+  const lbls = oc.map(o => o.outcome.slice(0, 9));
+  let hm = `<div class="hm" style="grid-template-columns:70px repeat(${k},1fr)">`;
+  hm += `<div></div>` + lbls.map(l => `<div class="lbl top">${l}</div>`).join('');
+  d.corr.forEach((row, i) => {
+    hm += `<div class="lbl">${lbls[i]}</div>`;
+    row.forEach(v => {
+      const a = Math.min(1, Math.abs(v));
+      const bg = v >= 0
+        ? `rgba(255,160,40,${(a*0.85).toFixed(2)})`
+        : `rgba(90,110,160,${(a*0.8).toFixed(2)})`;
+      hm += `<div class="cell" style="background:${bg}" title="${v}">${v.toFixed(1).replace('0.','.')}</div>`;
+    });
+  });
+  hm += `</div>`;
+
+  $('detail').innerHTML = `
+    <h2 class="cluster-name">${d.title}</h2>
+    <div class="sub">${k} mutually exclusive outcomes · covariance: ${d.cov_source}
+      · Neg Risk cluster — correlation read from market structure, not inferred</div>
+
+    <div class="section">
+      <div class="sec-h">Outcomes — lit market state</div>
+      <table class="data">
+        <thead><tr><th>Outcome</th><th>Implied</th><th>Mid</th><th>24h vol</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="sec-h">Cluster correlation — what a lit sell-off cascades through</div>
+      <div class="hm-wrap">${hm}</div>
+      <div class="note">Amber = positive co-movement, slate = negative. Mutually exclusive outcomes are
+        structurally negatively correlated — one outcome's exit reprices every sibling on a lit book.</div>
+    </div>
+
+    <div class="section">
+      <div class="sec-h">Order ticket — ${oc[selIdx].outcome}</div>
+      <div class="ticket">
+        <div class="field"><label>Side</label>
+          <div class="side-toggle">
+            <button id="btnSell" class="${state.side==='SELL'?'on-sell':''}" onclick="setSide('SELL')">SELL</button>
+            <button id="btnBuy" class="${state.side==='BUY'?'on-buy':''}" onclick="setSide('BUY')">BUY</button>
+          </div>
+        </div>
+        <div class="field"><label>Size (contracts)</label>
+          <input id="qSize" type="number" value="5000" min="10" step="100"></div>
+        <div class="field"><label>Limit price (optional)</label>
+          <input id="qLimit" type="number" placeholder="—" step="0.001" min="0.001" max="0.999"></div>
+        <div class="field"><button class="btn" style="width:100%" onclick="getQuote()">Get quote</button></div>
+      </div>
+      <div id="quotePanel"></div>
+    </div>`;
+}
+
+function pickToken(tok) { state.selToken = tok; state.lastQuote = null; renderDetail(); }
+function setSide(s) { state.side = s; state.lastQuote = null; renderDetail(); }
+
+/* ── quoting ── */
+async function getQuote() {
+  const size = parseFloat($('qSize').value || '0');
+  if (!size || size <= 0) return toast('Enter a size');
+  const r = await fetch('/api/quote', { method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ token_id: state.selToken, side: state.side, size })});
+  const data = await r.json();
+  state.lastQuote = data;
+  renderQuote(data, size);
+}
+
+function renderQuote(data, size) {
+  const q = data.quote, lit = data.lit;
+  const litBps = lit.slippage_bps ?? null;
+  const maxBps = Math.max(litBps ?? 0, q.naive_bps, q.dark_bps, 1);
+  const w = bps => Math.max(3, Math.round(bps / maxBps * 100));
+
+  const litBlock = litBps === null
+    ? `<div class="px" style="color:var(--faint)">no depth</div><div class="bps">book too thin to price</div>`
+    : `<div class="px" style="color:var(--red)">${lit.vwap.toFixed(3)}</div>
+       <div class="bps"><b style="color:var(--red)">${litBps} bps</b> slippage
+       ${lit.exhausted ? `· only ${lit.filled.toLocaleString()} fills, book exhausted` : `· ${lit.levels_used} levels swept`}</div>
+       <div class="bar-track"><div class="bar" style="background:var(--red);width:${w(litBps)}%"></div></div>`;
+
+  const hedgeRows = q.hedge_legs.slice(0, 6).map(h =>
+    `<div><span class="${h.direction==='BUY'?'dir-b':'dir-s'}">${h.direction}</span>
+     ${Math.abs(h.units).toLocaleString()} × ${h.outcome}</div>`).join('');
+
+  const allBuy = q.hedge_legs.length > 0 && q.hedge_legs.every(h => h.direction === 'BUY');
+
+  $('quotePanel').innerHTML = `
+    <div class="venues">
+      <div class="venue">
+        <div class="vn">Lit book — sweep now</div>${litBlock}
+        <div class="note">Visible to everyone. Cascades across the cluster before you finish filling.</div>
+      </div>
+      <div class="venue">
+        <div class="vn">Naive market maker</div>
+        <div class="px" style="color:var(--dim)">${q.naive_price.toFixed(3)}</div>
+        <div class="bps"><b>${q.naive_bps} bps</b> · must warehouse σ=${q.sigma_full}</div>
+        <div class="bar-track"><div class="bar" style="background:var(--faint);width:${w(q.naive_bps)}%"></div></div>
+        <div class="note">Prices this contract alone — charges for risk it can't hedge.</div>
+      </div>
+      <div class="venue hero">
+        <div class="vn">Chiaroscuro solver</div>
+        <div class="px" style="color:var(--amber)">${q.dark_price.toFixed(3)}</div>
+        <div class="bps"><b style="color:var(--amber)">${q.dark_bps} bps</b>
+          · residual σ=${q.sigma_residual} · <b class="saved">${(q.risk_reduction*100).toFixed(0)}% risk hedged away</b></div>
+        <div class="bar-track"><div class="bar" style="background:var(--amber);width:${w(q.dark_bps)}%"></div></div>
+        <div class="note">Prices the whole cluster. Charges only for risk the hedge can't remove
+          (incl. ${q.fee_bps} bps fee).</div>
+      </div>
+    </div>
+    <div class="hedge-list">
+      <div class="sec-h" style="margin:14px 0 6px">Solver hedge — executed across the cluster at fill</div>
+      ${hedgeRows || '<div class="empty">No hedge legs above dust threshold.</div>'}
+      ${allBuy ? `<div class="merge-note">All hedge legs are buys of sibling outcomes — on Polymarket the solver
+        can <b>merge the complete outcome set back into $1 collateral</b> via the CTF, making this hedge
+        mechanically executable on-chain, not just statistical.</div>` : ''}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px;align-items:center">
+      <button class="btn" onclick="routeIntent()">Route to pool — sealed</button>
+      <span class="note">Enters the current batch as an encrypted commitment.
+        ${data.edge_vs_lit_bps !== null ? `Est. edge vs lit: <b class="saved">${data.edge_vs_lit_bps} bps</b>` : ''}</span>
+    </div>`;
+}
+
+/* ── intents & pool ── */
+async function routeIntent() {
+  if (!state.lastQuote) return;
+  const size = parseFloat($('qSize').value || '0');
+  const lim = parseFloat($('qLimit').value);
+  const r = await fetch('/api/intent', { method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ token_id: state.selToken, side: state.side, size,
+                           limit_price: isNaN(lim) ? null : lim })});
+  const d = await r.json();
+  toast(`Sealed → batch ${d.batch_id} · clears in ${Math.round(d.clears_in_s)}s · ${d.commitment.slice(0,16)}…`);
+  pollPool();
+}
+
+async function forceClear() {
+  await fetch('/api/batch/clear', { method: 'POST' });
+  pollPool();
+}
+
+async function pollPool() {
+  const p = await (await fetch('/api/pool')).json();
+  $('tbBatch').textContent = p.batch_id;
+  $('tbSealed').textContent = p.sealed.length;
+  $('tbNotional').textContent = fmt$(p.stats.settled_notional);
+  $('tbSaved').textContent = p.avg_saved_bps + ' bps';
+  $('batchId').textContent = p.batch_id;
+  $('batchIn').textContent = Math.ceil(p.seconds_remaining) + 's';
+  $('ringNum').textContent = Math.ceil(p.seconds_remaining);
+  $('ringArc').style.strokeDashoffset = 201 * (1 - p.seconds_remaining / p.window);
+
+  $('sealedRows').innerHTML = p.sealed.length === 0
+    ? `<div class="empty">No sealed intents in this batch.<br>Route an order — its size and side stay encrypted until the batch clears.</div>`
+    : p.sealed.map(s => `
+        <div class="sealed-row">
+          <span class="hash">${s.commitment}</span>
+          <span class="redact" style="width:${28 + (s.commitment.charCodeAt(3) % 40)}px"></span>
+          <span class="redact" style="width:${16 + (s.commitment.charCodeAt(5) % 22)}px"></span>
+        </div>`).join('');
+
+  if (p.tape.length) {
+    const newest = p.tape[0].seq;
+    $('tapeBody').innerHTML = p.tape.map(t => `
+      <tr class="${t.seq > state.lastTapeSeq ? 'new' : ''}">
+        <td>${t.outcome.slice(0,14)}</td>
+        <td class="${t.mechanism==='P2P_CROSS'?'mech-cross':'mech-solver'}">${t.mechanism==='P2P_CROSS'?'CROSS':'SOLVER'}</td>
+        <td>${t.price.toFixed(3)}</td>
+        <td>${t.size.toLocaleString()}</td>
+        <td class="saved">${t.saved_bps !== null ? '+' + t.saved_bps : '—'}</td>
+      </tr>`).join('');
+    state.lastTapeSeq = newest;
+  }
+}
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 3400);
+}
+
+boot();
+</script>
+</body>
+</html>
