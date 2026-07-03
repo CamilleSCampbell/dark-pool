@@ -1,12 +1,21 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "name": "dark-pool",
-  "functions": {
-    "app.py": {
-      "maxDuration": 60
-    }
-  },
   "env": {
     "CHIAROSCURO_MODE": "live"
-  }
+  },
+  "services": {
+    "dark-pool": {
+      "root": ".",
+      "entrypoint": "app.py"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "dark-pool"
+      }
+    }
+  ]
 }
