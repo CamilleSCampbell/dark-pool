@@ -1,4 +1,4 @@
-"""Chiaroscuro API — REST layer + terminal frontend host.
+"""Hedgehog API — REST layer + terminal frontend host.
 
 Boot sequence: try live Polymarket (mode auto/live), fall back to fixtures.
 State is in-memory; a background task clears batches on the window cadence.
@@ -127,7 +127,7 @@ async def _batch_loop():
             pass
 
 
-app = FastAPI(title="Chiaroscuro", lifespan=lifespan)
+app = FastAPI(title="Hedgehog", lifespan=lifespan)
 
 
 @app.get("/")

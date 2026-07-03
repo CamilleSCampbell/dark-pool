@@ -1,4 +1,4 @@
-"""Chiaroscuro configuration — all env-driven, demo mode needs nothing."""
+"""Hedgehog configuration — all env-driven, demo mode needs nothing."""
 import os
 
 try:
@@ -7,9 +7,9 @@ try:
 except ImportError:
     pass
 
-MODE = os.getenv("CHIAROSCURO_MODE", "auto").lower()          # demo | live | auto
-HOST = os.getenv("CHIAROSCURO_HOST", "0.0.0.0")
-PORT = int(os.getenv("CHIAROSCURO_PORT", "8420"))
+MODE = os.getenv("HEDGEHOG_MODE", "auto").lower()          # demo | live | auto
+HOST = os.getenv("HEDGEHOG_HOST", "0.0.0.0")
+PORT = int(os.getenv("HEDGEHOG_PORT", "8420"))
 
 BATCH_WINDOW_SECONDS = int(os.getenv("BATCH_WINDOW_SECONDS", "30"))
 SOLVER_FEE_BPS = float(os.getenv("SOLVER_FEE_BPS", "8"))

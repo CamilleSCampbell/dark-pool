@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-/// @title ChiaroscuroSettlement — v0 stub for on-chain batch settlement
-/// @notice Settles cleared Chiaroscuro batches atomically on Polygon:
+/// @title HedgehogSettlement — v0 stub for on-chain batch settlement
+/// @notice Settles cleared Hedgehog batches atomically on Polygon:
 ///         CTF outcome tokens (ERC-1155) against USDC, at the uniform batch
 ///         clearing price, with both sides' EIP-712 intent signatures verified.
 ///
@@ -28,7 +28,7 @@ interface IERC1155 {
     function safeTransferFrom(address from, address to, uint256 id, uint256 amt, bytes calldata data) external;
 }
 
-contract ChiaroscuroSettlement {
+contract HedgehogSettlement {
     IERC20 public immutable usdc;
     IERC1155 public immutable ctf;          // Polymarket Conditional Token Framework
     address public operator;                 // batch clearer (v0: trusted; v2: proof-verified)

@@ -1,7 +1,7 @@
 """Gamma API client — market discovery and Neg Risk cluster extraction.
 
 Gamma is Polymarket's public, keyless discovery layer. The critical field for
-Chiaroscuro is the Neg Risk grouping: mutually-exclusive outcome sets share a
+Hedgehog is the Neg Risk grouping: mutually-exclusive outcome sets share a
 negRiskMarketID, which IS the correlated cluster — read straight from the
 market's own structure, no statistical inference required.
 """
@@ -42,7 +42,7 @@ def _parse_json_field(raw) -> list:
 
 
 def extract_clusters(events: list[dict], min_outcomes: int = 3) -> list[dict]:
-    """Turn Gamma events into cluster dicts Chiaroscuro can price.
+    """Turn Gamma events into cluster dicts Hedgehog can price.
 
     We keep events that are Neg Risk (mutually exclusive outcome sets) with at
     least `min_outcomes` live markets — below that, cluster hedging collapses

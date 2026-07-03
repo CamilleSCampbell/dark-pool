@@ -1,15 +1,16 @@
-# CHIAROSCURO
+# HEDGEHOG
 ### A dark pool for correlated event markets — built on Polymarket's Conditional Token Framework
 
 > Hide the intent. Never hide the outcome.
 
-Chiaroscuro is a private-execution layer for Polymarket positions. Orders are submitted as
+Hedgehog is a private-execution layer for Polymarket positions. Orders are submitted as
 sealed intents, cleared in discrete batch auctions at a uniform price, crossed peer-to-peer
 where possible, and filled by a **correlated-cluster pricing engine** where not — so a large
 exit never walks the public book or telegraphs its read on the event.
 
-The name is the painting technique: the composition of light and shadow in a single image.
-Lit market, dark pool, same underlying asset.
+The name is the animal posture: a hedgehog curls every spine inward so no single quill bears
+the shock alone. The solver does the same — wraps every sibling outcome around the position
+until only residual risk remains. Lit market, dark pool, same underlying asset.
 
 ---
 
@@ -25,7 +26,7 @@ are completely exposed, and each one costs real money:
 place a 5,000-contract sell on France, every bot on the planet sees the order
 sitting in the book *before it fills*. They front-run it, copy it, and reprice
 every correlated contract against you while your fill is still walking the
-levels. Chiaroscuro's sealed intent book addresses this: orders enter as
+levels. Hedgehog's sealed intent book addresses this: orders enter as
 encrypted commitments and are only revealed at batch clearing.
 
 **2. Cascade exposure (during trade).** Event markets move in clusters, not
@@ -35,7 +36,7 @@ encodes this directly: mutually exclusive outcomes are grouped under its
 **Neg Risk** adapter, which means the correlation structure isn't inferred —
 it's on-chain, in the market's own architecture. On a lit book, a large sell
 on one outcome cascades across the entire cluster before the seller finishes
-filling. Chiaroscuro's solver prices and hedges the *whole cluster at once*,
+filling. Hedgehog's solver prices and hedges the *whole cluster at once*,
 so the cascade never reaches the public book.
 
 **3. Pattern exposure (post-trade).** Even if no one sees your single order,
@@ -44,13 +45,13 @@ history reveals your strategy, your edge, your information sources. The
 Columbia wash-trading paper (Sirolly, Ma, Kanoria, Sethi 2025) proved this is
 tractable by tracing wallet clusters across months of on-chain data.
 Whale-tracking dashboards follow known wallets in real time and copy-trade
-them. Chiaroscuro v2 (ZK-proven settlement) addresses this: even post-trade,
+them. Hedgehog v2 (ZK-proven settlement) addresses this: even post-trade,
 individual orders and balances stay private — only the net settlement prints.
 
 **Pseudonymity ≠ privacy.** Identity concealment is the part Polymarket
 already provides (imperfectly — on-chain forensics and whale trackers erode
 it daily). Intent and pattern concealment are the parts nobody provides yet.
-That is what Chiaroscuro is for.
+That is what Hedgehog is for.
 
 ### How it works
 
@@ -62,7 +63,7 @@ can quote tighter than any single-contract market maker.
 ## Architecture
 
 ```
-chiaroscuro/
+hedgehog/
 ├── backend/
 │   ├── polymarket/          # Live data layer
 │   │   ├── gamma.py         # Gamma API — market discovery, Neg Risk cluster grouping
@@ -79,7 +80,7 @@ chiaroscuro/
 ├── frontend/
 │   └── index.html           # The terminal (single file, no build step)
 ├── contracts/
-│   └── ChiaroscuroSettlement.sol   # v0 on-chain settlement stub (atomic CTF/USDC swap)
+│   └── HedgehogSettlement.sol   # v0 on-chain settlement stub (atomic CTF/USDC swap)
 ├── .env.example
 └── requirements.txt
 ```
@@ -97,7 +98,7 @@ python -m backend.main
 (2026 World Cup winner Neg Risk cluster + a Fed-decision macro cluster) so every part of the
 system — pricing, batching, crossing, settlement — runs end-to-end with zero setup.
 
-**Live mode**: set `CHIAROSCURO_MODE=live` in `.env`. Market discovery and order books pull
+**Live mode**: set `HEDGEHOG_MODE=live` in `.env`. Market discovery and order books pull
 from Polymarket's public Gamma/CLOB endpoints (reads need no auth). To *execute* fallback
 routes on Polymarket's own CLOB you'll need trading credentials — see `.env.example`.
 
@@ -132,7 +133,7 @@ Each version addresses a specific privacy layer from the threat model above:
 
 Identity exposure (#0 — "who is this wallet?") is out of scope. Polymarket
 partially handles it. Tools like Tornado Cash tried to handle it fully and
-drew sanctions. Chiaroscuro deliberately does not touch identity — it hides
+drew sanctions. Hedgehog deliberately does not touch identity — it hides
 *what you're doing*, not *who you are*.
 
 ## Honest legal note

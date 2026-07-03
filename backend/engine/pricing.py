@@ -1,4 +1,4 @@
-"""The correlated-cluster pricing engine — Chiaroscuro's actual IP.
+"""The correlated-cluster pricing engine — Hedgehog's actual IP.
 
 A solver absorbing a fill on outcome i does NOT have to warehouse σ_i of risk.
 It hedges with the rest of the cluster. The minimum-variance hedge and the risk

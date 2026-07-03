@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CHIAROSCURO — dark pool for correlated event markets</title>
+<title>HEDGEHOG — dark pool for correlated event markets</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -28,8 +28,8 @@ button{font-family:inherit;cursor:pointer}
   border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:50}
 .wordmark{font-family:var(--disp);font-style:italic;font-weight:500;font-size:22px;
   letter-spacing:.01em;white-space:nowrap}
-.wordmark .chiaro{color:var(--paper)}
-.wordmark .scuro{color:var(--faint);text-shadow:0 0 14px rgba(255,160,40,.25)}
+.wordmark .hedge{color:var(--paper)}
+.wordmark .hog{color:var(--faint);text-shadow:0 0 14px rgba(255,160,40,.25)}
 .tag{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
   padding:3px 8px;border-radius:3px;border:1px solid var(--line);color:var(--dim)}
 .tag.live{color:var(--green);border-color:rgba(47,163,107,.5)}
@@ -178,7 +178,7 @@ table.data tr:hover{background:rgba(255,255,255,.02);cursor:pointer}
 <body>
 
 <div class="topbar">
-  <div class="wordmark"><span class="chiaro">chiaro</span><span class="scuro">scuro</span></div>
+  <div class="wordmark"><span class="hedge">hedge</span><span class="hog">hog</span></div>
   <nav class="nav">
     <a href="/" class="active">dark pool</a>
     <a href="/dashboard">dashboard</a>
@@ -408,7 +408,7 @@ function renderQuote(data, size) {
         <div class="note">Prices this contract alone — charges for risk it can't hedge.</div>
       </div>
       <div class="venue hero">
-        <div class="vn">Chiaroscuro solver</div>
+        <div class="vn">Hedgehog solver</div>
         <div class="px" style="color:var(--amber)">${q.dark_price.toFixed(3)}</div>
         <div class="bps"><b style="color:var(--amber)">${q.dark_bps} bps</b>
           · residual σ=${q.sigma_residual} · <b class="saved">${(q.risk_reduction*100).toFixed(0)}% risk hedged away</b></div>
